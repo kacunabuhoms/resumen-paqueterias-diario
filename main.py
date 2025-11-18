@@ -7,9 +7,10 @@ from datetime import date, timedelta
 # CONFIGURACIÓN BÁSICA
 # ==========================
 
-API_URL = "https://wapi.wing.buhologistics.com/getDatasetInfo"
-API_KEY = "0DJB9c_xpbQbprsg7iZLaUR"
 LOCAL_TZ = "America/Monterrey"
+
+API_URL = st.secrets["api"]["url"]
+API_KEY = st.secrets["api"]["key"]
 
 # Inicializar dataset en sesión
 if "raw_dataset" not in st.session_state:
