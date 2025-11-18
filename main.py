@@ -3,6 +3,12 @@ import requests
 import pandas as pd
 from datetime import date, timedelta
 
+# 🔧 Config de página: wide
+st.set_page_config(
+    page_title="Resumen de entregas por fecha",
+    layout="wide",
+)
+
 # ==========================
 # CONFIGURACIÓN BÁSICA
 # ==========================
