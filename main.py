@@ -283,21 +283,6 @@ else:
         st.markdown(f"**{porcentaje_incidencias_rango_str}**")
 
     # ==========================
-    # REGISTROS SIN delivery_date
-    # (JUSTO ANTES DEL SUBHEADER DE PAQUETERÍAS)
-    # ==========================
-
-    if "delivery_date" in df_all.columns:
-        # Consideramos nulos y strings vacíos
-        mask_delivery_na = df_all["delivery_date"].isna() | (
-            df_all["delivery_date"].astype(str).str.strip() == ""
-        )
-        total_sin_delivery = int(mask_delivery_na.sum())
-        st.markdown(f"**Registros sin `delivery_date` (vacío o nulo) en todo el dataset:** {total_sin_delivery}")
-    else:
-        st.markdown("**Registros sin `delivery_date`:** la columna `delivery_date` no existe en el dataset.")
-
-    # ==========================
     # RESUMEN AGRUPADO POR CARRIER - FECHA SELECCIONADA
     # ==========================
 
