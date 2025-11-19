@@ -127,39 +127,42 @@ else:
 
     # --- Parseo y normalización de fechas a America/Monterrey ---
     # Se asume que el API manda timestamptz en UTC
+
+    # START_DATE
     if "start_date" in df_all.columns:
-        start_utc = pd.to_datetime(df_all["start_date"], utc=True, errors="coerce")
-        df_all["_start_local"] = start_utc.dt.tz_convert(LOCAL_TZ)
+        start_local_dt = (
+            pd.to_datetime(df_all["start_date"], utc=True, errors="coerce")
+              .dt.tz_convert(LOCAL_TZ)
+        )
+        # Datetime completo interno (para horas)
+        df_all["_start_local"] = start_local_dt
+        # Solo fecha (sin hora ni tz) para el dataset principal
+        df_all["start_date"] = start_local_dt.dt.date
     else:
         df_all["_start_local"] = pd.NaT
+        df_all["start_date"] = pd.NaT
 
+    # DELIVERY_DATE
     if "delivery_date" in df_all.columns:
-        delivery_utc = pd.to_datetime(df_all["delivery_date"], utc=True, errors="coerce")
-        df_all["_delivery_local"] = delivery_utc.dt.tz_convert(LOCAL_TZ)
+        delivery_local_dt = (
+            pd.to_datetime(df_all["delivery_date"], utc=True, errors="coerce")
+              .dt.tz_convert(LOCAL_TZ)
+        )
+        df_all["_delivery_local"] = delivery_local_dt
+        df_all["delivery_date"] = delivery_local_dt.dt.date
     else:
         df_all["_delivery_local"] = pd.NaT
+        df_all["delivery_date"] = pd.NaT
 
-    # --- Sobrescribir columnas principales como SOLO fecha (sin timestamptz) ---
-    if "start_date" in df_all.columns:
-        df_all["start_date"] = df_all["_start_local"].dt.date
-
-    if "delivery_date" in df_all.columns:
-        df_all["delivery_date"] = df_all["_delivery_local"].dt.date
-
-    # Horas de entrega (en base a datetimes locales) - seguimos usando los datetimes auxiliares
+    # Horas de entrega (en base a datetimes locales internos)
     df_all["_horas_entrega"] = (
         df_all["_delivery_local"] - df_all["_start_local"]
     ).dt.total_seconds() / 3600.0
 
     # ==========================
-    # FILTRO POR FECHA SELECCIONADA (zona local)
-    # Ahora filtramos directamente por delivery_date (date)
+    # FILTRO POR FECHA SELECCIONADA (usa delivery_date como DATE)
     # ==========================
-    if "delivery_date" in df_all.columns:
-        mask_fecha = df_all["delivery_date"] == selected_date
-    else:
-        mask_fecha = pd.Series(False, index=df_all.index)
-
+    mask_fecha = df_all["delivery_date"] == selected_date
     df_fecha = df_all.loc[mask_fecha].copy()
 
     # ==========================
@@ -238,13 +241,12 @@ else:
     porcentaje_incidencias_fecha_str = f"{porcentaje_incidencias_fecha:.2f}%"
 
     # ---------- Resumen ÚLTIMOS N DÍAS (incluyendo delivery_date seleccionado) ----------
-    # Usamos la fecha ya "limpia" (date) en delivery_date
     fecha_min = selected_date - timedelta(days=n_dias - 1)
-    if "delivery_date" in df_all.columns:
-        mask_rango = (df_all["delivery_date"] >= fecha_min) & (df_all["delivery_date"] <= selected_date)
-    else:
-        mask_rango = pd.Series(False, index=df_all.index)
 
+    mask_rango = (
+        (df_all["delivery_date"] >= fecha_min)
+        & (df_all["delivery_date"] <= selected_date)
+    )
     df_rango = df_all.loc[mask_rango].copy()
 
     total_entregado_rango = len(df_rango)
