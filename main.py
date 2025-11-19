@@ -147,14 +147,14 @@ with btn_col2:
         output.seek(0)
 
         st.download_button(
-            "💾 Descargar datos (Excel)",
+            "💾 Descargar datos",
             data=output,
             file_name=f"dataset_entregas_{date.today().isoformat()}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
     else:
         st.download_button(
-            "💾 Descargar datos (Excel)",
+            "💾 Descargar datos",
             data=b"",
             file_name="dataset_entregas.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
