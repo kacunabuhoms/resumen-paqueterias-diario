@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import date, timedelta
-from io import BytesIO
 
 # ==========================
 # CONFIG DE PÁGINA (WIDE)
@@ -38,7 +37,7 @@ st.markdown(
     """
 )
 
-# --------- BOTONES: CARGAR DATOS + DESCARGAR EXCEL ---------
+# --------- BOTONES: CARGAR DATOS + DESCARGAR CSV ---------
 btn_col1, btn_col2 = st.columns([1, 1])
 
 with btn_col1:
@@ -131,7 +130,7 @@ if st.session_state["raw_dataset"] is not None:
         df_all["_delivery_local"] - df_all["_start_local"]
     ).dt.total_seconds() / 3600.0
 
-# --------- BOTÓN DESCARGAR EXCEL (usa df_all ya procesado) ---------
+# --------- BOTÓN DESCARGAR CSV (usa df_all ya procesado) ---------
 with btn_col2:
     if df_all is not None:
         # Exportamos sin columnas internas auxiliares
@@ -140,24 +139,20 @@ with btn_col2:
             errors="ignore",
         ).copy()
 
-        output = BytesIO()
-        # Necesitas openpyxl en requirements.txt
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df_export.to_excel(writer, index=False, sheet_name="entregas")
-        output.seek(0)
+        csv_data = df_export.to_csv(index=False).encode("utf-8")
 
         st.download_button(
-            "💾 Descargar datos",
-            data=output,
-            file_name=f"dataset_entregas_{date.today().isoformat()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "💾 Descargar datos (CSV)",
+            data=csv_data,
+            file_name=f"dataset_entregas_{date.today().isoformat()}.csv",
+            mime="text/csv",
         )
     else:
         st.download_button(
-            "💾 Descargar datos",
+            "💾 Descargar datos (CSV)",
             data=b"",
-            file_name="dataset_entregas.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file_name="dataset_entregas.csv",
+            mime="text/csv",
             disabled=True,
         )
 
