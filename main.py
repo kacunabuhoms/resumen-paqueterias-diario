@@ -73,7 +73,7 @@ if cargar_clicked:
     if st.session_state["raw_dataset"] is not None:
         st.success(f"✅ Datos cargados. Registros totales: {len(st.session_state['raw_dataset'])}")
 
-# Botón de descarga a la derecha: descarga TODO el dataset del endpoint
+# Botón de descarga a la derecha: descarga TODO el dataset crudo del endpoint
 with btn_col2:
     if st.session_state["raw_dataset"] is not None:
         df_export = pd.DataFrame(st.session_state["raw_dataset"])
@@ -86,7 +86,6 @@ with btn_col2:
             mime="text/csv",
         )
     else:
-        # Botón deshabilitado mientras no haya datos
         st.download_button(
             "💾 Descargar datos (CSV)",
             data="",
@@ -140,18 +139,27 @@ else:
     else:
         df_all["_delivery_local"] = pd.NaT
 
-    # Fecha (solo día) en zona local para filtrar
-    df_all["_delivery_local_date"] = df_all["_delivery_local"].dt.date
+    # --- Sobrescribir columnas principales como SOLO fecha (sin timestamptz) ---
+    if "start_date" in df_all.columns:
+        df_all["start_date"] = df_all["_start_local"].dt.date
 
-    # Horas de entrega (en base a datetimes locales)
+    if "delivery_date" in df_all.columns:
+        df_all["delivery_date"] = df_all["_delivery_local"].dt.date
+
+    # Horas de entrega (en base a datetimes locales) - seguimos usando los datetimes auxiliares
     df_all["_horas_entrega"] = (
         df_all["_delivery_local"] - df_all["_start_local"]
     ).dt.total_seconds() / 3600.0
 
     # ==========================
     # FILTRO POR FECHA SELECCIONADA (zona local)
+    # Ahora filtramos directamente por delivery_date (date)
     # ==========================
-    mask_fecha = df_all["_delivery_local_date"] == selected_date
+    if "delivery_date" in df_all.columns:
+        mask_fecha = df_all["delivery_date"] == selected_date
+    else:
+        mask_fecha = pd.Series(False, index=df_all.index)
+
     df_fecha = df_all.loc[mask_fecha].copy()
 
     # ==========================
@@ -161,13 +169,7 @@ else:
     st.subheader("📋 Detalle de envíos para la fecha seleccionada")
 
     if not df_fecha.empty:
-        # Sobrescribir columnas de fecha con la versión en horario de Monterrey
-        if "start_date" in df_fecha.columns:
-            df_fecha["start_date"] = df_fecha["_start_local"].dt.strftime("%Y-%m-%d %H:%M")
-
-        if "delivery_date" in df_fecha.columns:
-            df_fecha["delivery_date"] = df_fecha["_delivery_local"].dt.strftime("%Y-%m-%d %H:%M")
-
+        # Ya tenemos start_date y delivery_date como tipo date (sin tz ni hora)
         cols = [
             "client",
             "carrier",
@@ -236,12 +238,13 @@ else:
     porcentaje_incidencias_fecha_str = f"{porcentaje_incidencias_fecha:.2f}%"
 
     # ---------- Resumen ÚLTIMOS N DÍAS (incluyendo delivery_date seleccionado) ----------
-
+    # Usamos la fecha ya "limpia" (date) en delivery_date
     fecha_min = selected_date - timedelta(days=n_dias - 1)
-    mask_rango = (
-        (df_all["_delivery_local_date"] >= fecha_min)
-        & (df_all["_delivery_local_date"] <= selected_date)
-    )
+    if "delivery_date" in df_all.columns:
+        mask_rango = (df_all["delivery_date"] >= fecha_min) & (df_all["delivery_date"] <= selected_date)
+    else:
+        mask_rango = pd.Series(False, index=df_all.index)
+
     df_rango = df_all.loc[mask_rango].copy()
 
     total_entregado_rango = len(df_rango)
