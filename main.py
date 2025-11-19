@@ -37,8 +37,14 @@ st.markdown(
     """
 )
 
-# --------- BOTÓN PARA CARGAR DATOS DESDE EL API ---------
-if st.button("1️⃣ Cargar datos desde API"):
+# --------- BOTONES: CARGAR DATOS + DESCARGAR CSV ---------
+btn_col1, btn_col2 = st.columns([1, 1])
+
+with btn_col1:
+    cargar_clicked = st.button("1️⃣ Cargar datos desde API")
+
+# Si se presiona el botón, llamamos al API y guardamos en sesión
+if cargar_clicked:
     headers = {
         "api-key": API_KEY
     }
@@ -66,6 +72,28 @@ if st.button("1️⃣ Cargar datos desde API"):
 
     if st.session_state["raw_dataset"] is not None:
         st.success(f"✅ Datos cargados. Registros totales: {len(st.session_state['raw_dataset'])}")
+
+# Botón de descarga a la derecha: descarga TODO el dataset del endpoint
+with btn_col2:
+    if st.session_state["raw_dataset"] is not None:
+        df_export = pd.DataFrame(st.session_state["raw_dataset"])
+        csv_data = df_export.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            "💾 Descargar datos (CSV)",
+            data=csv_data,
+            file_name=f"dataset_entregas_{date.today().isoformat()}.csv",
+            mime="text/csv",
+        )
+    else:
+        # Botón deshabilitado mientras no haya datos
+        st.download_button(
+            "💾 Descargar datos (CSV)",
+            data="",
+            file_name="dataset_entregas.csv",
+            mime="text/csv",
+            disabled=True,
+        )
 
 # --------- SELECCIÓN DE FECHA PARA FILTRAR ---------
 
