@@ -139,10 +139,23 @@ with btn_col2:
             errors="ignore",
         ).copy()
 
-        # Formato de fecha DD-MM-AAAA en CSV
+        # Ordenar por delivery_date DESC usando datetime
+        df_export["_delivery_dt_sort"] = pd.to_datetime(
+            df_export["delivery_date"], errors="coerce"
+        )
+        df_export = (
+            df_export
+            .sort_values("_delivery_dt_sort", ascending=False)
+            .drop(columns="_delivery_dt_sort")
+        )
+
+        # Formato de fecha DD/MM/AAAA en CSV
         for col in ["start_date", "delivery_date"]:
             if col in df_export.columns:
-                df_export[col] = pd.to_datetime(df_export[col], errors="coerce").dt.strftime("%d-%m-%Y")
+                df_export[col] = (
+                    pd.to_datetime(df_export[col], errors="coerce")
+                    .dt.strftime("%d/%m/%Y")
+                )
 
         csv_data = df_export.to_csv(index=False).encode("utf-8")
 
@@ -202,10 +215,13 @@ else:
         # Copiamos solo las columnas que se van a mostrar
         df_display = df_fecha[cols_presentes].copy()
 
-        # Formato DD-MM-AAAA en la tabla para las fechas
+        # Formato DD/MM/AAAA en la tabla para las fechas
         for col in ["start_date", "delivery_date"]:
             if col in df_display.columns:
-                df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%m-%Y")
+                df_display[col] = (
+                    pd.to_datetime(df_display[col], errors="coerce")
+                    .dt.strftime("%d/%m/%Y")
+                )
 
         rename_map = {
             "client": "Cliente",
@@ -297,7 +313,7 @@ else:
 
     with header_col1:
         st.markdown(
-            f"<h4 style='text-align:center'>Resumen {selected_date.strftime('%d-%m-%Y')}</h4>",
+            f"<h4 style='text-align:center'>Resumen {selected_date.strftime('%d/%m/%Y')}</h4>",
             unsafe_allow_html=True,
         )
 
