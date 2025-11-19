@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import date, timedelta
+from io import BytesIO
 
 # ==========================
 # CONFIG DE PÁGINA (WIDE)
@@ -37,7 +38,7 @@ st.markdown(
     """
 )
 
-# --------- BOTONES: CARGAR DATOS + DESCARGAR CSV ---------
+# --------- BOTONES: CARGAR DATOS + DESCARGAR EXCEL ---------
 btn_col1, btn_col2 = st.columns([1, 1])
 
 with btn_col1:
@@ -73,42 +74,13 @@ if cargar_clicked:
     if st.session_state["raw_dataset"] is not None:
         st.success(f"✅ Datos cargados. Registros totales: {len(st.session_state['raw_dataset'])}")
 
-# Botón de descarga a la derecha: descarga TODO el dataset crudo del endpoint
-with btn_col2:
-    if st.session_state["raw_dataset"] is not None:
-        df_export = pd.DataFrame(st.session_state["raw_dataset"])
-        csv_data = df_export.to_csv(index=False).encode("utf-8")
+# ==========================
+# CONSTRUIR DF PROCESADO (df_all)
+# ==========================
 
-        st.download_button(
-            "💾 Descargar datos (CSV)",
-            data=csv_data,
-            file_name=f"dataset_entregas_{date.today().isoformat()}.csv",
-            mime="text/csv",
-        )
-    else:
-        st.download_button(
-            "💾 Descargar datos (CSV)",
-            data="",
-            file_name="dataset_entregas.csv",
-            mime="text/csv",
-            disabled=True,
-        )
+df_all = None
 
-# --------- SELECCIÓN DE FECHA PARA FILTRAR ---------
-
-default_date = date.today() - timedelta(days=1)
-
-selected_date = st.date_input(
-    "Selecciona la fecha de entrega a filtrar",
-    value=default_date,
-)
-
-if st.session_state["raw_dataset"] is None:
-    st.info("Primero presiona **\"Cargar datos desde API\"** para obtener la información.")
-else:
-    # ==========================
-    # DATAFRAME COMPLETO
-    # ==========================
+if st.session_state["raw_dataset"] is not None:
     df_all = pd.DataFrame(st.session_state["raw_dataset"])
 
     # --- Incidence -> bool (en todo el dataset) ---
@@ -159,6 +131,48 @@ else:
         df_all["_delivery_local"] - df_all["_start_local"]
     ).dt.total_seconds() / 3600.0
 
+# --------- BOTÓN DESCARGAR EXCEL (usa df_all ya procesado) ---------
+with btn_col2:
+    if df_all is not None:
+        # Exportamos sin columnas internas auxiliares
+        df_export = df_all.drop(
+            columns=["_start_local", "_delivery_local", "_horas_entrega"],
+            errors="ignore",
+        ).copy()
+
+        output = BytesIO()
+        # Necesitas openpyxl en requirements.txt
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df_export.to_excel(writer, index=False, sheet_name="entregas")
+        output.seek(0)
+
+        st.download_button(
+            "💾 Descargar datos (Excel)",
+            data=output,
+            file_name=f"dataset_entregas_{date.today().isoformat()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    else:
+        st.download_button(
+            "💾 Descargar datos (Excel)",
+            data=b"",
+            file_name="dataset_entregas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            disabled=True,
+        )
+
+# --------- SELECCIÓN DE FECHA PARA FILTRAR ---------
+
+default_date = date.today() - timedelta(days=1)
+
+selected_date = st.date_input(
+    "Selecciona la fecha de entrega a filtrar",
+    value=default_date,
+)
+
+if df_all is None:
+    st.info("Primero presiona **\"Cargar datos desde API\"** para obtener la información.")
+else:
     # ==========================
     # FILTRO POR FECHA SELECCIONADA (usa delivery_date como DATE)
     # ==========================
@@ -172,7 +186,7 @@ else:
     st.subheader("📋 Detalle de envíos para la fecha seleccionada")
 
     if not df_fecha.empty:
-        # Ya tenemos start_date y delivery_date como tipo date (sin tz ni hora)
+        # start_date y delivery_date ya son tipo date (sin tz ni hora)
         cols = [
             "client",
             "carrier",
