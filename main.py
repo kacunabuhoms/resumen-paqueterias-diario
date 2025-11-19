@@ -107,7 +107,7 @@ if st.session_state["raw_dataset"] is not None:
         )
         # Datetime completo interno (para horas)
         df_all["_start_local"] = start_local_dt
-        # Solo fecha (sin hora ni tz) para el dataset principal
+        # Solo fecha (sin hora ni tz) para el dataset principal (tipo date)
         df_all["start_date"] = start_local_dt.dt.date
     else:
         df_all["_start_local"] = pd.NaT
@@ -138,6 +138,11 @@ with btn_col2:
             columns=["_start_local", "_delivery_local", "_horas_entrega"],
             errors="ignore",
         ).copy()
+
+        # Formato de fecha DD-MM-AAAA en CSV
+        for col in ["start_date", "delivery_date"]:
+            if col in df_export.columns:
+                df_export[col] = pd.to_datetime(df_export[col], errors="coerce").dt.strftime("%d-%m-%Y")
 
         csv_data = df_export.to_csv(index=False).encode("utf-8")
 
@@ -181,7 +186,6 @@ else:
     st.subheader("📋 Detalle de envíos para la fecha seleccionada")
 
     if not df_fecha.empty:
-        # start_date y delivery_date ya son tipo date (sin tz ni hora)
         cols = [
             "client",
             "carrier",
@@ -195,6 +199,14 @@ else:
         ]
         cols_presentes = [c for c in cols if c in df_fecha.columns]
 
+        # Copiamos solo las columnas que se van a mostrar
+        df_display = df_fecha[cols_presentes].copy()
+
+        # Formato DD-MM-AAAA en la tabla para las fechas
+        for col in ["start_date", "delivery_date"]:
+            if col in df_display.columns:
+                df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%m-%Y")
+
         rename_map = {
             "client": "Cliente",
             "carrier": "Paquetería",
@@ -207,7 +219,7 @@ else:
             "service_mode": "Modo de servicio",
         }
 
-        df_display = df_fecha[cols_presentes].rename(columns=rename_map)
+        df_display = df_display.rename(columns=rename_map)
 
         st.dataframe(df_display, width="stretch")
     else:
@@ -285,7 +297,7 @@ else:
 
     with header_col1:
         st.markdown(
-            f"<h4 style='text-align:center'>Resumen {selected_date.strftime('%Y-%m-%d')}</h4>",
+            f"<h4 style='text-align:center'>Resumen {selected_date.strftime('%d-%m-%Y')}</h4>",
             unsafe_allow_html=True,
         )
 
