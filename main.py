@@ -3,7 +3,9 @@ import requests
 import pandas as pd
 from datetime import date, timedelta
 
-# 🔧 Config de página: wide
+# ==========================
+# CONFIG DE PÁGINA (WIDE)
+# ==========================
 st.set_page_config(
     page_title="Resumen de entregas por fecha",
     layout="wide",
@@ -26,12 +28,12 @@ if "raw_dataset" not in st.session_state:
 # UI - STREAMLIT
 # ==========================
 
-st.title("📦 Resumen de entregas por fecha (delivery_date)")
+st.title("📦 Resumen de entregas por fecha de entrega")
 
 st.markdown(
     """
     1. Presiona **"Cargar datos desde API"** para obtener el dataset completo.  
-    2. Luego selecciona la fecha de `delivery_date` para ver la tabla y los resúmenes.
+    2. Luego selecciona la fecha de entrega para ver la tabla y los resúmenes.
     """
 )
 
@@ -70,7 +72,7 @@ if st.button("1️⃣ Cargar datos desde API"):
 default_date = date.today() - timedelta(days=1)
 
 selected_date = st.date_input(
-    "Selecciona la fecha de delivery_date a filtrar",
+    "Selecciona la fecha de entrega a filtrar",
     value=default_date,
 )
 
@@ -279,6 +281,21 @@ else:
         st.markdown(f"**{tiempo_promedio_rango_str}**")
         st.markdown(f"**{total_incidencias_rango}**")
         st.markdown(f"**{porcentaje_incidencias_rango_str}**")
+
+    # ==========================
+    # REGISTROS SIN delivery_date
+    # (JUSTO ANTES DEL SUBHEADER DE PAQUETERÍAS)
+    # ==========================
+
+    if "delivery_date" in df_all.columns:
+        # Consideramos nulos y strings vacíos
+        mask_delivery_na = df_all["delivery_date"].isna() | (
+            df_all["delivery_date"].astype(str).str.strip() == ""
+        )
+        total_sin_delivery = int(mask_delivery_na.sum())
+        st.markdown(f"**Registros sin `delivery_date` (vacío o nulo) en todo el dataset:** {total_sin_delivery}")
+    else:
+        st.markdown("**Registros sin `delivery_date`:** la columna `delivery_date` no existe en el dataset.")
 
     # ==========================
     # RESUMEN AGRUPADO POR CARRIER - FECHA SELECCIONADA
