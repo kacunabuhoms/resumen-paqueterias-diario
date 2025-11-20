@@ -16,36 +16,37 @@ st.title("📊 Dataset Info desde API de Wing")
 def get_dataset():
     url = "https://wapi.wing.buhologistics.com/getDatasetInfo"
     headers = {
-        "api-key": "0DJB9c_xpbQbprsg7iZLaUR"
+        "api-key": "0DJB9c_xpbQbprsg7iZLaUR"  # en prod: pásalo a st.secrets
     }
 
     response = requests.get(url, headers=headers, timeout=60)
-    response.raise_for_status()  # lanza error si el status != 200
+    response.raise_for_status()  # error si status != 200
+
+    raw_text = response.text
 
     # Intentar primero como JSON
     try:
         data = response.json()
-        # Ajusta esto si tu JSON viene en otra estructura
+
+        # Ajusta esta parte según cómo venga tu JSON
         if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
             records = data["data"]
         elif isinstance(data, list):
             records = data
         else:
-            # Si es un dict raro, lo metemos en una lista
             records = [data]
 
         df = pd.DataFrame(records)
-        # Generamos un CSV a partir del DataFrame
+
+        # Generamos un CSV a partir del DataFrame (todo el contenido)
         csv_text = df.to_csv(index=False)
         return df, csv_text
 
     except ValueError:
         # Si NO es JSON, asumimos que ya viene como CSV
-        text = response.text
-        # Creamos el DataFrame a partir del CSV crudo
-        df = pd.read_csv(StringIO(text))
+        df = pd.read_csv(StringIO(raw_text))
         # Regresamos el texto tal cual "como viene"
-        return df, text
+        return df, raw_text
 
 
 # -------------------------------------------------
@@ -59,7 +60,15 @@ with st.spinner("Obteniendo datos de la API..."):
         st.stop()
 
 st.subheader("Vista de datos en tabla")
-st.dataframe(df, use_container_width=True)
+
+# 🔧 TRUCO: convertir todo a string para evitar errores de pyarrow
+df_display = df.copy().astype(str)
+
+st.dataframe(df_display, use_container_width=True)
+
+# Opcional: ver tipos originales por si quieres depurar
+with st.expander("Ver tipos de columnas (dtypes originales)"):
+    st.write(df.dtypes)
 
 st.subheader("Descargar datos")
 st.download_button(
